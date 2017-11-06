@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jul 28 15:55:16 2016
-
 Calculate the minimum required Rw+Ctr or Rw+C
-
 @author: Weigang Wei
 """
 import numpy as np
 import random
-import pandas as pd
 import matplotlib.pylab as plt
 
 
@@ -19,94 +16,21 @@ class C_Ctr():
         """
         self.C = np.asarray([-21,-14,-8,-5,-4])
         self.Ctr = np.asarray([-14,-10,-7,-4,-6])
-        self.CRange = np.asarray([6,5,5,11,9])/2. # 125 to 2k 
-        self.CtrRange = np.asarray([6,4,6,11,12])/2.# 125 to 2k 
-
-
-class L2i():
-    def __init__(self):
-        self.medGlazSpec = np.array([-24., -19., -10., -4., -3.]) # normalised to 0 dB
+        self.CRange = np.asarray([6,5,5,11,9])/2. # 125 to 2k average deviation
+        self.CtrRange = np.asarray([6,4,6,11,12])/2.# 125 to 2k average deviation  
+    
+class CalculationInit():
+    def __int__(self, refSpec=[0.,0.,0.,0.,0.], vairation=[6.,5.,6.,11.,11.]):
+        self.refSpec = refSpec
+        self.variation = vairation
         
-        
-def Deltai(sourceSpec, refCurve):
-    ''' calculated the normalised Delta, where Delta is the difference 
-        between source and the Ctr or C curve. ref Wei's study
-            sourceSpec: array of source spec
-            refCurve: array of Ctr or C cuver
-            length of sourceSpec and refCurve should match
-    '''
-    return sourceSpec - refCurve
-    
-def norm_Delta(Deltai):
-    v = 10*np.log10(np.sum(10**(Deltai/10.)))
-    normalisedDelta = Deltai - v
-    return normalisedDelta
-
-def L2_i_spec(L2Limit, normalisedDelta):
-    ''' determine the internal noise spectrum based on the difference between 
-        the source and the reference Ctr or C curve. 
-    '''
-    return L2Limit + normalisedDelta
-    
-def room_conditioni(V, S, T):
-    condi = 10.*np.log10(T) + 10.*np.log10(S/V) + 11
-    return condi
-
-def room_condition2(V, T, n):
-    cond2 = 10.*np.log10(T) + 10.*np.log10(n/V) + 21
-    return cond2
-
-def required_RwCtr(L2i, DeltaiCtr, condi):
-    RwCtr = condi - 10*np.log10(sum(10**((L2i - DeltaiCtr)/10.)))
-    return RwCtr
-
-def required_RwC(L2i, DeltaiC, condi):
-    RwC = condi - 10*np.log10(np.sum(10**((L2i - DeltaiC)/10.)))
-    return RwC
-
-def calc_singleNo_rating_Wei(sourceSpec, L2Limit, V, S, T, n):    
-    ''' sourceSpec = array of source spec
-        L2limit = single number in dB(A)
-        V = volume in m3
-        S = window area in m2
-        T = reverberation time in s
-        n = number of vent
-    '''
-    CCtr = C_Ctr()
-    CtrOct = CCtr.Ctr
-    DeltaiCtr = sourceSpec - CtrOct
-    print('Source - Ctr curve -> ', DeltaiCtr)
-    normalisedDelta = norm_Delta(DeltaiCtr)
-    print('normalised Source - Ctr -> ', np.round(normalisedDelta))
-    L2i = L2_i_spec(L2Limit, normalisedDelta)  
-    print('L2 in octave bands -> ', np.round(L2i))
-    condi = room_conditioni(V,S,T)
-    print('10*lg(T)+10*lg(S/V)+11 -> ', np.round(condi))
-    RwCtr = required_RwCtr(L2i, DeltaiCtr, condi)
-    
-    print('\n')
-    COct = CCtr.C
-    DeltaiC = sourceSpec - COct
-    print('Source - C curve -> ', DeltaiC)
-    normalisedDelta = norm_Delta(DeltaiC)
-    print('normalised Source - C -> ', np.round(normalisedDelta))
-    L2i = L2_i_spec(L2Limit, normalisedDelta)  
-    print('L2 in octave bands -> ', np.round(L2i))
-    print('10*lg(T)+10*lg(S/V)+11 -> ', np.round(condi))
-    RwC = required_RwC(L2i, DeltaiC, condi)
-    
-    print('\nRequired Rw+Ctr ->', int(round(RwCtr)))
-    print('Required Rw+C   -> ', int(round(RwC)))
-    print("\n\n")
-    
-    return [np.round(RwCtr), np.round(RwC)]
-
-class CalcSNRRandom(C_Ctr, L2i):
-    def __init__(self, sourceSpec,L2Limit, V, S, T, n):
+class CalcSNRRandom(C_Ctr, CalculationInit):
+    def __init__(self, sourceSpec,V, S, T, n,L2LimitWin=30, L2LimitVent=30, refSpec=[0.,0.,0.,0.,0.], vairation=[6.,5.,6.,11.,11.]):
         C_Ctr.__init__(self)
-        L2i.__init__(self)
+        CalculationInit.__int__(self, refSpec, vairation)
         self.sp = sourceSpec
-        self.L2Limit = L2Limit
+        self.L2LimitWin = L2LimitWin
+        self.L2LimitVent = L2LimitVent
         self.V = V
         self.S = S
         self.T = T
@@ -114,101 +38,97 @@ class CalcSNRRandom(C_Ctr, L2i):
         self.NUM = 10000
         self.Deltai_Ctr = self.sp - self.Ctr
         self.Deltai_C = self.sp - self.C
-        self.refSpec = [0, 0, 0, 0, 0]
-        self.variation = (self.CtrRange + self.CRange)/2.
+        self.condi = 10.*np.log10(T) + 10.*np.log10(S/V) + 11
+        self.condi2 = 10.*np.log10(T) + 10.*np.log10(n/V) + 21
         
-    def _generate_L2_spec(self, refSpec, variation):   
-        print("L2,i variation: ", variation)
+    def _generate_L2_spec(self, L2limit):   
+        print("L2,i variation: ", self.variation)
         specs = []
         for num in range(self.NUM):
             spec = []
-            for s,v in zip(refSpec, variation):
+            for s,v in zip(self.refSpec, self.variation):
                 spec.append(round(random.uniform(s-v, s+v))) # use the closest integer
             
             specA = np.asarray(spec)
             total = 10.*np.log10(np.sum(10**(specA/10)))
-            specA = specA - total + self.L2Limit
-#            print('specA - > ', np.round(specA))
+            specA = specA - total + L2limit
             specs.append(specA)
         return specs
     
     def _run_test(self):
-        condi = room_conditioni(self.V,self.S, self.T)
-#        cond2 = room_condition2(self.V, self.T, self.n)
-        L2is = []
-        RwCtr, RwC = [], []
-        L2is = self._generate_L2_spec(self.refSpec, self.variation)
+        RwCtr, RwC, DnewCtr,DnewC = [], [], [], []
+        L2isWin = self._generate_L2_spec(self.L2LimitWin)
+        L2isVent = self._generate_L2_spec(self.L2LimitVent)
 #            
-        for L2i in L2is:
-            vari  = 10.*np.log10(np.sum(10**((L2i - self.Deltai_Ctr)/10)))
-            var2 = 10.*np.log10(np.sum(10**((L2i - self.Deltai_C)/10)))
-            RwCtr += [condi - vari]
-            RwC += [condi - var2]
-#        
-        outputRwCtr = pd.Series(RwCtr)
-        print("\nRw+Ctr statistics: ")
-        RwCtrStat = outputRwCtr.describe()
-        RwCtrStat.to_csv('RwCtr-Statistics.txt', sep = ' ')
-        print(RwCtrStat)
-        outputRwC = pd.Series(RwC)
-        print("\nRw+C statistics: ")
-        RwCStat = outputRwC.describe()
-        RwCStat.to_csv('RwC-Statistics.txt', sep = ' ')
-        print(RwCStat)
+        for L2iw, L2iv in zip(L2isWin, L2isVent):
+            vari  = 10.*np.log10(np.sum(10**((L2iw - self.Deltai_Ctr)/10)))
+            var2 = 10.*np.log10(np.sum(10**((L2iw - self.Deltai_C)/10)))
+            RwCtr += [self.condi - vari]
+            RwC += [self.condi - var2]
+            
+            var3  = 10.*np.log10(np.sum(10**((L2iv - self.Deltai_Ctr)/10)))
+            var4 = 10.*np.log10(np.sum(10**((L2iv - self.Deltai_C)/10))) 
+            DnewCtr += [self.condi2 - var3]
+            DnewC += [self.condi2 - var4]
+#       
+        
+        RwCtr = np.sort(RwCtr)
+        RwC = np.sort(RwC)
+        DnewCtr = np.sort(DnewCtr)
+        DnewC = np.sort(DnewC)
+        for n, x in enumerate([RwCtr, RwC, DnewCtr, DnewC]):
+            if n== 0:
+                print("\nRw+Ctr: ")
+            elif n==1:
+                print("\nRw+C: ")
+            elif n==2:
+                print("\nDnew+Ctr: ")
+            else:
+                print("\nDnew+C: ")
+            print("5% :        ", "%0.1f" %x[int(len(x)*0.95)])
+            print("25% to 75%: ", "%0.2f" %(x[int(len(x)*0.75)] - x[int(len(x)*0.25)]))
         
         
         # print required Rw+Ctr, Rw+C
         plt.figure()
-        bt = min(RwCtr+RwC)
-        top = max(RwCtr+RwC)
+        bt = min(min(RwCtr), min(RwC))
+        top = max(max(RwCtr), max(RwC))
         plt.boxplot([np.round(RwCtr), np.round(RwC)])
         plt.xticks([1,2],['Rw+Ctr','Rw+C'])
         plt.ylim([bt-5,top+5])
         plt.ylabel('dB')
         plt.grid()
-        plt.savefig('Statistics.png')
+#        plt.savefig('Statistics.png')
         
         plt.figure()
         plt.subplot(1,2,1)
         plt.hist(RwCtr, bins=2*int(max(RwCtr)-min(RwCtr)))
         plt.subplot(1,2,2)
         plt.hist(RwC, bins=2*int(max(RwC)-min(RwC)))
-        plt.savefig('density-function.png')
-        plt.show()
-
-def case_studies():
-    # 4743 VITA 6-16-6.8 (Laminated) (38,34)
-    sspeci = np.array([47, 53, 56, 67, 66])
-    V, S, T, n = 38, 3.6, 0.5, 1
-    L2limit = 30 # 29
-    
-    # 4574 Spanish city 6/12/4/12/8.8 (44.2) guardian triple (39, 35)
-    sspec2 = np.array([57, 59, 64, 85, 79])
-    V2, S2, T2, n2 = 39.3, 3.1, 0.5, 0
-    L2limit2 = 38 # 38
-    
-    # Traffic envelope upper limits
-    sspec3 = np.array([60.4, 63.1, 65.4, 64.1, 59.2])
-    V3, S3, T3, n3 = 45, 2.4, 0.5, 0
-    L2limit3 = 35 
-    
-    # Traffic envelope lower limits
-    sspec4 = np.array([49.0, 56.9, 61.0, 67.6, 63.9])
-    V4, S4, T4, n4 = 45, 2.4, 0.5, 0
-    L2limit4 = 35
-    
-    casei = [sspeci, V, S, T, n, L2limit]
-    case2 = [sspec2, V2, S2, T2, n2, L2limit2]
-    case3 = [sspec3, V3, S3, T3, n3, L2limit3]
-    case4 = [sspec4, V4, S4, T4, n4, L2limit4]
-    
-    return casei
-
+#        plt.savefig('density-function.png')
+        
+        # print required Dnew+Ctr, Dnew+C
+        plt.figure()
+        bt = min(min(DnewCtr), min(DnewC))
+        top = max(max(DnewCtr), max(DnewC))
+        plt.boxplot([np.round(DnewCtr), np.round(DnewC)])
+        plt.xticks([1,2],['Dnew+Ctr','Dnew+C'])
+        plt.ylim([bt-5,top+5])
+        plt.ylabel('dB')
+        plt.grid()
+#        plt.savefig('Statistics.png')
+        
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.hist(DnewCtr, bins=2*int(max(DnewCtr)-min(DnewCtr)))
+        plt.subplot(1,2,2)
+        plt.hist(DnewC, bins=2*int(max(DnewC)-min(DnewC)))
+#        plt.savefig('density-function.png')
+        
     
 if __name__=='__main__':
-    [sourceSpec, V, S, T, n, L2Limit]=case_studies() 
     sourceSpec = [39, 43, 47, 53, 45]
-    V, S, T, n, L2Limit = 22.5, 4.1, 0.5, 1, 28
-#    [RwCtr, RwC] = calc_singleNo_rating_Wei(sourceSpec, L2Limit, V, S, T, n)
-    objtest = CalcSNRRandom(sourceSpec, L2Limit, V, S, T, n)
+    V, S, T, n, L2LimitWin, L2LimitVent = 22.5, 4.1, 0.5, 1, 28, 30
+    objtest = CalcSNRRandom(sourceSpec, V, S, T, n, L2LimitWin, L2LimitVent)
     objtest._run_test()
+    plt.show()
