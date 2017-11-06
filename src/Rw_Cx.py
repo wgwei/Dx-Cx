@@ -24,7 +24,7 @@ class CalculationInit():
         self.refSpec = refSpec
         self.variation = vairation
         
-class CalcSNRRandom(C_Ctr, CalculationInit):
+class CalcSNR(C_Ctr, CalculationInit):
     def __init__(self, sourceSpec,V, S, T, n,L2LimitWin=30, L2LimitVent=30, refSpec=[0.,0.,0.,0.,0.], vairation=[6.,5.,6.,11.,11.]):
         C_Ctr.__init__(self)
         CalculationInit.__int__(self, refSpec, vairation)
@@ -72,11 +72,11 @@ class CalcSNRRandom(C_Ctr, CalculationInit):
             DnewC += [self.condi2 - var4]
 #       
         
-        RwCtr = np.sort(RwCtr)
-        RwC = np.sort(RwC)
-        DnewCtr = np.sort(DnewCtr)
-        DnewC = np.sort(DnewC)
-        for n, x in enumerate([RwCtr, RwC, DnewCtr, DnewC]):
+        self.RwCtr = np.sort(RwCtr)
+        self.RwC = np.sort(RwC)
+        self.DnewCtr = np.sort(DnewCtr)
+        self.DnewC = np.sort(DnewC)
+        for n, x in enumerate([self.RwCtr, self.RwC, self.DnewCtr, self.DnewC]):
             if n== 0:
                 print("\nRw+Ctr: ")
             elif n==1:
@@ -88,12 +88,12 @@ class CalcSNRRandom(C_Ctr, CalculationInit):
             print("5% :        ", "%0.1f" %x[int(len(x)*0.95)])
             print("25% to 75%: ", "%0.2f" %(x[int(len(x)*0.75)] - x[int(len(x)*0.25)]))
         
-        
+    def _plot_out(self):
         # print required Rw+Ctr, Rw+C
         plt.figure()
-        bt = min(min(RwCtr), min(RwC))
-        top = max(max(RwCtr), max(RwC))
-        plt.boxplot([np.round(RwCtr), np.round(RwC)])
+        bt = min(min(self.RwCtr), min(self.RwC))
+        top = max(max(self.RwCtr), max(self.RwC))
+        plt.boxplot([np.round(self.RwCtr), np.round(self.RwC)])
         plt.xticks([1,2],['Rw+Ctr','Rw+C'])
         plt.ylim([bt-5,top+5])
         plt.ylabel('dB')
@@ -102,16 +102,16 @@ class CalcSNRRandom(C_Ctr, CalculationInit):
         
         plt.figure()
         plt.subplot(1,2,1)
-        plt.hist(RwCtr, bins=2*int(max(RwCtr)-min(RwCtr)))
+        plt.hist(self.RwCtr, bins=2*int(max(self.RwCtr)-min(self.RwCtr)))
         plt.subplot(1,2,2)
-        plt.hist(RwC, bins=2*int(max(RwC)-min(RwC)))
+        plt.hist(self.RwC, bins=2*int(max(self.RwC)-min(self.RwC)))
 #        plt.savefig('density-function.png')
         
         # print required Dnew+Ctr, Dnew+C
         plt.figure()
-        bt = min(min(DnewCtr), min(DnewC))
-        top = max(max(DnewCtr), max(DnewC))
-        plt.boxplot([np.round(DnewCtr), np.round(DnewC)])
+        bt = min(min(self.DnewCtr), min(self.DnewC))
+        top = max(max(self.DnewCtr), max(self.DnewC))
+        plt.boxplot([np.round(self.DnewCtr), np.round(self.DnewC)])
         plt.xticks([1,2],['Dnew+Ctr','Dnew+C'])
         plt.ylim([bt-5,top+5])
         plt.ylabel('dB')
@@ -120,15 +120,15 @@ class CalcSNRRandom(C_Ctr, CalculationInit):
         
         plt.figure()
         plt.subplot(1,2,1)
-        plt.hist(DnewCtr, bins=2*int(max(DnewCtr)-min(DnewCtr)))
+        plt.hist(self.DnewCtr, bins=2*int(max(self.DnewCtr)-min(self.DnewCtr)))
         plt.subplot(1,2,2)
-        plt.hist(DnewC, bins=2*int(max(DnewC)-min(DnewC)))
+        plt.hist(self.DnewC, bins=2*int(max(self.DnewC)-min(self.DnewC)))
 #        plt.savefig('density-function.png')
-        
-    
+        plt.show()
+   
 if __name__=='__main__':
     sourceSpec = [39, 43, 47, 53, 45]
     V, S, T, n, L2LimitWin, L2LimitVent = 22.5, 4.1, 0.5, 1, 28, 30
-    objtest = CalcSNRRandom(sourceSpec, V, S, T, n, L2LimitWin, L2LimitVent)
+    objtest = CalcSNR(sourceSpec, V, S, T, n, L2LimitWin, L2LimitVent)
     objtest._run_test()
-    plt.show()
+    objtest._plot_out()
