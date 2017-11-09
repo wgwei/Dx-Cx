@@ -35,7 +35,7 @@ class CalcSNR(C_Ctr, CalculationInit):
         self.S = S
         self.T = T
         self.n = n
-        self.NUM = 10000
+        self.NUM = 5000
         self.Deltai_Ctr = self.sp - self.Ctr
         self.Deltai_C = self.sp - self.C
         self.condi = 10.*np.log10(T) + 10.*np.log10(S/V) + 11
