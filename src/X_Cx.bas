@@ -38,7 +38,11 @@ Next x
 
 ' room condition
 roomCondi = 10# * WorksheetFunction.Log10(T) + 10# * WorksheetFunction.Log10(S / V) + 11
-roomCond2 = 10# * WorksheetFunction.Log10(T) + 10# * WorksheetFunction.Log10(n / V) + 21
+If n >= 1 Then
+    roomCond2 = 10# * WorksheetFunction.Log10(T) + 10# * WorksheetFunction.Log10(n / V) + 21
+Else
+    roomCond2 = 9999  ' if no vent specified, put a big number to avoid any output
+End If
 
 ' Generate internal spectrum
 Dim L2specsWin(NUM, 5) As Double
@@ -81,8 +85,13 @@ For m = 1 To NUM
     Next n
     RwC(m) = roomCondi - 10 * WorksheetFunction.Log10(L2winC)
     RwCtr(m) = roomCondi - 10 * WorksheetFunction.Log10(L2winCtr)
-    DnewC(m) = roomCond2 - 10 * WorksheetFunction.Log10(L2ventC)
-    DnewCtr(m) = roomCond2 - 10 * WorksheetFunction.Log10(L2ventCtr)
+    If roomCond2 <> 9999 Then
+        DnewC(m) = roomCond2 - 10 * WorksheetFunction.Log10(L2ventC)
+        DnewCtr(m) = roomCond2 - 10 * WorksheetFunction.Log10(L2ventCtr)
+    Else
+        DnewC(m) = 0
+        DnewCtr(m) = 0
+    End If
 Next m
 
 'clear all the output
@@ -221,24 +230,26 @@ Sub Scan_database(IANLwin As Variant, IANLvent As Variant, roomCondi As Variant,
     rgv = "A1:" & "J" & CStr(vRow)
     Set vent = Sheets("Vent").Range(rgv)
     
-    w = w + 1
-    'calculate vent and output
-    For m = 2 To vRow
-        eng = 0
-        For n = 6 To 10
-            L2i(n - 5) = sspec(n - 5) - vent.Cells(m, n).Value + roomCond2
-            eng = eng + 10 ^ (L2i(n - 5) / 10)
-        Next n
-        L2 = 10# * WorksheetFunction.Log10(eng)
-        If L2 <= IANLvent Then
-            Cells(17 + w, 2).Value = vent.Cells(m, "B")
-            Cells(17 + w, 3).Value = vent.Cells(m, "D")
-            Cells(17 + w, 4).Value = vent.Cells(m, "E")
-            Cells(17 + w, 5).Value = L2
-            For p = 6 To 10
-                Cells(17 + w, p).Value = L2i(p - 5)
-            Next p
-            w = w + 1
-        End If
-    Next m
+    If roomCond2 <> 9999 Then
+        w = w + 1
+        'calculate vent and output
+        For m = 2 To vRow
+            eng = 0
+            For n = 6 To 10
+                L2i(n - 5) = sspec(n - 5) - vent.Cells(m, n).Value + roomCond2
+                eng = eng + 10 ^ (L2i(n - 5) / 10)
+            Next n
+            L2 = 10# * WorksheetFunction.Log10(eng)
+            If L2 <= IANLvent Then
+                Cells(17 + w, 2).Value = vent.Cells(m, "B")
+                Cells(17 + w, 3).Value = vent.Cells(m, "D")
+                Cells(17 + w, 4).Value = vent.Cells(m, "E")
+                Cells(17 + w, 5).Value = L2
+                For p = 6 To 10
+                    Cells(17 + w, p).Value = L2i(p - 5)
+                Next p
+                w = w + 1
+            End If
+        Next m
+    End If
 End Sub
