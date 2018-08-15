@@ -20,6 +20,28 @@ Ctr(3) = -7#
 Ctr(4) = -4#
 Ctr(5) = -6#
 
+' clear the output cells
+Dim blank As Range
+Set blank = Range("C11:G14")
+blank = ""
+
+Dim blank2 As Range
+Set blank2 = Sheets("Report").Range("B12:F12")
+blank2 = ""
+
+Dim blank3 As Range
+Set blank3 = Sheets("Report").Range("B16:F16")
+blank3 = ""
+
+Dim blank4 As Range
+Set blank4 = Sheets("output").Range("A2:H11000")
+blank4 = ""
+
+Dim blank5 As Range
+Set blank5 = Range("A17:J1000")
+blank5 = ""
+
+
 ' read info
 V = Cells(5, "C")
 S = Cells(5, "D")
@@ -94,11 +116,6 @@ For m = 1 To NUM
     End If
 Next m
 
-'clear all the output
-Dim blank As Range
-Set blank = Sheets("output").Range("A2:H11000")
-blank = ""
-
 'write the results to seperate sheet
 Sheets("output").Cells(1, 1).Value = "Rw+C"
 Sheets("output").Cells(1, 2).Value = "Rw+Ctr"
@@ -111,12 +128,19 @@ For m = 1 To NUM
     Sheets("output").Cells(m + 1, 4).Value = DnewCtr(m)
 Next m
 
-Call sortOutput(NUM)
+Dim flag As String
+If roomCond2 <> 9999 Then
+    flag = "OFF"
+Else
+    flag = "ON"
+End If
+
+Call sortOutput(NUM, flag)
 Call Scan_database(IANLwin, IANLvent, roomCondi, roomCond2)
 MsgBox "Calculation completed!"
 End Sub
 
-Sub sortOutput(NUM As Long)
+Sub sortOutput(NUM As Long, flag As String)
     ' sort the results
     Dim NUMstr, rgi, rg2, rg3, rg4 As String
     NUMstr = CStr(NUM + 1)
@@ -139,37 +163,76 @@ Sub sortOutput(NUM As Long)
         Sheets("output").Cells(m + 1, 7).Value = DnewCsort(m)
         Sheets("output").Cells(m + 1, 8).Value = DnewCtrSort(m)
     Next m
-    
+
     ' convert to Long to get the index
-    Dim fivePerc, twfivePerc, svfivePerc As Long
+    Dim fivePerc, twfivePerc, svfivePerc, Ctr25To75, C25To75 As Long
     fivePecr = CLng(NUM * 0.95)
     twfivePerc = CLng(NUM * 0.75)
     svfivePerc = CLng(NUM * 0.25)
-    
+    fiftyPerc = CLng(NUM * 0.5)
+
+    Ctr25To75 = RwCtrSort(twfivePerc) - RwCtrSort(svfivePerc)
+    C25To75 = RwCsort(twfivePerc) - RwCsort(svfivePerc)
+
     ' show statistical values
     Cells(11, "C").Value = RwCsort(NUM)
     Cells(11, "D").Value = RwCsort(fivePecr)
     Cells(11, "E").Value = RwCsort(twfivePerc)
     Cells(11, "F").Value = RwCsort(svfivePerc)
     Cells(11, "G").Value = RwCsort(twfivePerc) - RwCsort(svfivePerc)
-    
+
     Cells(12, "C").Value = RwCtrSort(NUM)
     Cells(12, "D").Value = RwCtrSort(fivePecr)
     Cells(12, "E").Value = RwCtrSort(twfivePerc)
     Cells(12, "F").Value = RwCtrSort(svfivePerc)
     Cells(12, "G").Value = RwCtrSort(twfivePerc) - RwCtrSort(svfivePerc)
-    
-    Cells(13, "C").Value = DnewCsort(NUM)
-    Cells(13, "D").Value = DnewCsort(fivePecr)
-    Cells(13, "E").Value = DnewCsort(twfivePerc)
-    Cells(13, "F").Value = DnewCsort(svfivePerc)
-    Cells(13, "G").Value = DnewCsort(twfivePerc) - DnewCsort(svfivePerc)
-    
-    Cells(14, "C").Value = DnewCtrSort(NUM)
-    Cells(14, "D").Value = DnewCtrSort(fivePecr)
-    Cells(14, "E").Value = DnewCtrSort(twfivePerc)
-    Cells(14, "F").Value = DnewCtrSort(svfivePerc)
-    Cells(14, "G").Value = DnewCtrSort(twfivePerc) - DnewCtrSort(svfivePerc)
+    If flag = "OFF" Then
+        Cells(13, "C").Value = DnewCsort(NUM)
+        Cells(13, "D").Value = DnewCsort(fivePecr)
+        Cells(13, "E").Value = DnewCsort(twfivePerc)
+        Cells(13, "F").Value = DnewCsort(svfivePerc)
+        Cells(13, "G").Value = DnewCsort(twfivePerc) - DnewCsort(svfivePerc)
+
+        Cells(14, "C").Value = DnewCtrSort(NUM)
+        Cells(14, "D").Value = DnewCtrSort(fivePecr)
+        Cells(14, "E").Value = DnewCtrSort(twfivePerc)
+        Cells(14, "F").Value = DnewCtrSort(svfivePerc)
+        Cells(14, "G").Value = DnewCtrSort(twfivePerc) - DnewCtrSort(svfivePerc)
+    End If
+
+    If Ctr25To75 <= C25To75 Then
+        Sheets("Report").Cells(12, "B").Value = RwCtrSort(NUM)
+        Sheets("Report").Cells(12, "C").Value = RwCtrSort(fivePecr)
+        Sheets("Report").Cells(12, "D").Value = RwCtrSort(twfivePerc)
+        Sheets("Report").Cells(12, "E").Value = RwCtrSort(fiftyPerc)
+        Sheets("Report").Cells(12, "F").Value = RwCtrSort(svfivePerc)
+        Sheets("Report").Cells(12, "G").Value = "Rw+Ctr"
+    Else
+        Sheets("Report").Cells(12, "B").Value = RwCsort(NUM)
+        Sheets("Report").Cells(12, "C").Value = RwCsort(fivePecr)
+        Sheets("Report").Cells(12, "D").Value = RwCsort(twfivePerc)
+        Sheets("Report").Cells(12, "E").Value = RwCsort(fiftyPerc)
+        Sheets("Report").Cells(12, "F").Value = RwCsort(svfivePerc)
+        Sheets("Report").Cells(12, "G").Value = "Rw+C"
+    End If
+
+    If flag = "OFF" Then
+        If Ctr25To75 <= C25To75 Then
+            Sheets("Report").Cells(16, "B").Value = DnewCtrSort(NUM)
+            Sheets("Report").Cells(16, "C").Value = DnewCtrSort(fivePecr)
+            Sheets("Report").Cells(16, "D").Value = DnewCtrSort(twfivePerc)
+            Sheets("Report").Cells(16, "E").Value = DnewCtrSort(fiftyPerc)
+            Sheets("Report").Cells(16, "F").Value = DnewCtrSort(svfivePerc)
+            Sheets("Report").Cells(16, "G").Value = "Dne,w+Ctr"
+        Else
+            Sheets("Report").Cells(16, "B").Value = DnewCsort(NUM)
+            Sheets("Report").Cells(16, "C").Value = DnewCsort(fivePecr)
+            Sheets("Report").Cells(16, "D").Value = DnewCsort(twfivePerc)
+            Sheets("Report").Cells(16, "E").Value = DnewCsort(fiftyPerc)
+            Sheets("Report").Cells(16, "F").Value = DnewCsort(svfivePerc)
+            Sheets("Report").Cells(16, "G").Value = "Dne,w+C"
+        End If
+    End If
     
 End Sub
 Sub Scan_database(IANLwin As Variant, IANLvent As Variant, roomCondi As Variant, roomCond2 As Variant)
@@ -187,20 +250,16 @@ Sub Scan_database(IANLwin As Variant, IANLvent As Variant, roomCondi As Variant,
     Dim eng As Double
     Dim L2i(5) As Double
     
-    'clear all the output
-    Set blank = Range("A17:J1000")
-    blank = ""
-    
     ' read glass data
     'Find the last non-blank cell in column H(1)
     lRow = Sheets("Glass").Cells(Rows.Count, 8).End(xlUp).Row
     'Find the last non-blank cell in row 1
     lCol = Sheets("Glass").Cells(1, Columns.Count).End(xlToLeft).Column
-    
+
     Dim rg As String
     rg = "A1:" & "J" & CStr(lRow)
     Set glass = Sheets("Glass").Range(rg)
-    
+
     ' calculate glass and output
     w = 0
     For m = 2 To lRow
@@ -221,15 +280,14 @@ Sub Scan_database(IANLwin As Variant, IANLvent As Variant, roomCondi As Variant,
             w = w + 1
         End If
     Next m
-    
-    
+
     ' read vent data
     vRow = Sheets("Vent").Cells(Rows.Count, 8).End(xlUp).Row
     vCol = Sheets("Vent").Cells(1, Columns.Count).End(xlToLeft).Column
     Dim rgv As String
     rgv = "A1:" & "J" & CStr(vRow)
     Set vent = Sheets("Vent").Range(rgv)
-    
+
     If roomCond2 <> 9999 Then
         w = w + 1
         'calculate vent and output
